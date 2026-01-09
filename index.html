@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recommendation Systems in Social Media — Explained + Math</title>
+  <meta name="description" content="Interactive notes on recommendation systems in social media: clear explanations with optional math + widgets." />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+  <div id="progressBar" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand__dot" aria-hidden="true"></div>
+      <div>
+        <div class="brand__title">Recommendation Systems</div>
+        <div class="brand__subtitle">Social Media • Clear explanations + optional math + widgets</div>
+      </div>
+    </div>
+
+    <div class="topbar__right">
+      <label class="search" aria-label="Search sections">
+        <span class="search__icon" aria-hidden="true">⌕</span>
+        <input id="searchInput" type="search" placeholder="Search (cosine, latent factors, NDCG, cold start, bandit)..." />
+      </label>
+
+      <button id="toggleTheme" class="iconBtn" type="button" aria-label="Toggle dark mode">
+        <span aria-hidden="true">🌙</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar__section">
+        <div class="sidebar__title">On this page</div>
+        <nav id="toc" class="toc" aria-label="Table of contents"></nav>
+      </div>
+
+      <div class="sidebar__section callout">
+        <div class="callout__title">How to read</div>
+        <p class="callout__text">
+          Each section starts with a <strong>plain-language takeaway</strong>.
+          Open <strong>Show the math</strong> blocks if you want the formal version.
+          Try the widgets to see how scoring and evaluation work.
+        </p>
+      </div>
+
+      <div class="sidebar__section miniCard">
+        <div class="miniCard__title">Quick controls</div>
+        <div class="miniCard__content">
+          <button class="pill" type="button" data-open-all>Open all</button>
+          <button class="pill" type="button" data-close-all>Close all</button>
+          <button class="pill" type="button" data-reading>Reading mode</button>
+        </div>
+      </div>
+    </aside>
+
+    <main id="content" class="content">
+
+      <!-- HERO -->
+      <section class="hero" id="overview">
+        <h1>Recommendation Systems in Social Media</h1>
+        <p class="hero__lead">
+          Your feed is not random. It’s a ranked list created by a recommender: the platform chooses a shortlist,
+          predicts what you’ll value, then sorts items so the most relevant appear first.
+        </p>
+
+        <div class="takeaway">
+          <div class="takeaway__title">Plain-language takeaway</div>
+          <p class="takeaway__text">
+            A recommender is a “smart sorter”. It uses your history (and everyone else’s) to estimate which posts/videos
+            you’ll likely engage with — then ranks them.
+          </p>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="stat__k">What it outputs</div>
+            <div class="stat__v">A ranked feed (top → bottom)</div>
+          </div>
+          <div class="stat">
+            <div class="stat__k">Signals</div>
+            <div class="stat__v">Clicks, likes, watch time, follows</div>
+          </div>
+          <div class="stat">
+            <div class="stat__k">Math tools</div>
+            <div class="stat__v">Vectors, matrices, probability, graphs</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- WHAT IT DOES -->
+      <section class="card" id="what-a-recommender-does">
+        <div class="card__header">
+          <h2>1) What a recommender system does</h2>
+          <p class="muted">It’s not just “pick content” — it’s “rank content”.</p>
+        </div>
+
+        <div class="takeaway">
+          <div class="takeaway__title">Plain-language takeaway</div>
+          <p class="takeaway__text">
+            Social media has too much content. A recommender chooses a manageable shortlist and orders it so the best items appear first.
+          </p>
+        </div>
+
+        <div class="grid2">
+          <div>
+            <p>
+              Most feeds use a pipeline:
+              <strong>candidate generation</strong> (shortlist),
+              <strong>scoring</strong> (predict how valuable each item is),
+              then <strong>ranking</strong> (sort + apply rules like diversity and safety).
+            </p>
+
+            <div class="infoBox">
+              <div class="infoBox__title">What does “score” mean?</div>
+              <p class="infoBox__text">
+                Often a predicted probability (e.g., chance you click) or an expected value (e.g., expected watch time).
+                The score is used to rank items.
+              </p>
+            </div>
+
+            <ul class="niceList">
+              <li><strong>Candidate generation:</strong> shortlist ~100–5,000 items</li>
+              <li><strong>Ranking model:</strong> score + sort the shortlist</li>
+              <li><strong>Re-ranking:</strong> diversify, remove duplicates, apply safety rules</li>
+            </ul>
+          </div>
+
+          <div class="media">
+            <div class="mediaFrame">
+              <div class="diagram">
+                <div class="diagram__step">
+                  <div class="diagram__title">1) Candidates</div>
+                  <div class="diagram__text">From follows, interests, trends</div>
+                </div>
+                <div class="diagram__arrow">→</div>
+                <div class="diagram__step">
+                  <div class="diagram__title">2) Predict</div>
+                  <div class="diagram__text">P(click), watch time, etc.</div>
+                </div>
+                <div class="diagram__arrow">→</div>
+                <div class="diagram__step">
+                  <div class="diagram__title">3) Rank</div>
+                  <div class="diagram__text">Sort + diversify</div>
+                </div>
+              </div>
+              <p class="caption">A realistic view: shortlist → predict → rank.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FOUNDATIONS -->
+      <section class="accordionGroup card" id="math-foundations">
+        <div class="card__header">
+          <h2>2) Foundations (explained first)</h2>
+          <p class="muted">We’ll use math as a tool — not as a barrier.</p>
+        </div>
+
+        <!-- user-item -->
+        <details class="accordion" open>
+          <summary>
+            <span>User–Item Matrix: storing interactions</span>
+            <span class="chip">Concept</span>
+          </summary>
+          <div class="accordion__body">
+
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                Recommendations can be seen as “filling in blanks”: if we know what a user interacted with, we can guess what else they might like.
+              </p>
+            </div>
+
+            <p>
+              Imagine a big table: users are rows, items are columns.
+              Each cell stores an interaction (like, click, view, watch time).
+              Most cells are empty because no user sees everything — that’s <span class="gterm" data-term="sparsity">sparsity</span>.
+            </p>
+
+            <div class="miniGrid">
+              <div class="matrixCard">
+                <div class="matrixTitle">Tiny example</div>
+                <table class="matrix">
+                  <thead>
+                    <tr><th></th><th>Item A</th><th>Item B</th><th>Item C</th><th>Item D</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><th>User 1</th><td>1</td><td>?</td><td>1</td><td>0</td></tr>
+                    <tr><th>User 2</th><td>?</td><td>1</td><td>0</td><td>?</td></tr>
+                    <tr><th>User 3</th><td>0</td><td>?</td><td>?</td><td>1</td></tr>
+                  </tbody>
+                </table>
+                <div class="matrixLegend">
+                  <span class="badge b1">1 = interacted</span>
+                  <span class="badge b2">0 = skipped</span>
+                  <span class="badge b3">? = unknown</span>
+                </div>
+              </div>
+
+              <div class="sideNote">
+                <p class="calloutText">
+                  The recommender predicts the <strong>?</strong> cells, then recommends the highest predicted items.
+                </p>
+                <ul>
+                  <li>Modern systems also use content features (text, hashtags, audio, visuals)</li>
+                  <li>And time: recent behavior usually matters more</li>
+                </ul>
+              </div>
+            </div>
+
+            <details class="mathBox">
+              <summary>Show the math (optional)</summary>
+              <div class="mathBox__body">
+                <p class="muted">
+                  Let R(u,i) be interaction value. Predict missing entries R̂(u,i), then rank items by R̂(u,i).
+                </p>
+                <div class="eqMono">Recommend top-k items by sorting: R̂(u, i)</div>
+              </div>
+            </details>
+
+          </div>
+        </details>
+
+        <!-- similarity -->
+        <details class="accordion" open>
+          <summary>
+            <span>Similarity: “people like you liked this”</span>
+            <span class="chip">Intuition</span>
+          </summary>
+          <div class="accordion__body">
+
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                Similarity methods find users (or items) that behave similarly, then borrow preferences from them.
+              </p>
+            </div>
+
+            <p>
+              If we represent a user’s interests as a vector (numbers describing interactions),
+              we can measure how close two users are. Cosine similarity is popular because it works well for sparse vectors.
+            </p>
+
+            <details class="mathBox">
+              <summary>Show the math (optional)</summary>
+              <div class="mathBox__body">
+                <div class="eqMono">Cosine: sim(u,v) = (u · v) / (||u|| ||v||)</div>
+                <p class="muted">
+                  This compares the angle between vectors (direction), not just the size.
+                </p>
+              </div>
+            </details>
+
+            <div class="widget cardInner">
+              <div class="widget__header">
+                <h3>Widget: Cosine similarity calculator</h3>
+                <p class="muted">Enter vectors (comma-separated). Example: <code>1,0,1,1</code></p>
+              </div>
+
+              <div class="formRow">
+                <label class="field">
+                  <span>Vector A</span>
+                  <input id="vecA" type="text" value="1,0,1,1" />
+                </label>
+                <label class="field">
+                  <span>Vector B</span>
+                  <input id="vecB" type="text" value="1,1,0,1" />
+                </label>
+              </div>
+
+              <div class="toolRow">
+                <button class="button" id="btnCosine" type="button">Compute</button>
+                <div class="result" id="cosineOut">Result: —</div>
+              </div>
+
+              <div class="smallNote" id="cosineMeaning">Meaning: —</div>
+            </div>
+
+          </div>
+        </details>
+
+        <!-- latent factors -->
+        <details class="accordion">
+          <summary>
+            <span>Latent factors: hidden “taste dimensions”</span>
+            <span class="chip">Model</span>
+          </summary>
+          <div class="accordion__body">
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                Instead of memorizing every interaction, the system learns a few hidden “taste dimensions”
+                for users and items, then matches them.
+              </p>
+            </div>
+
+            <p>
+              People don’t like content for one reason. They have mixtures: humor, sports, music, news, education, etc.
+              Latent factor models learn these patterns from behavior.
+            </p>
+
+            <details class="mathBox">
+              <summary>Show the math (optional)</summary>
+              <div class="mathBox__body">
+                <div class="eqMono">R ≈ U · Vᵀ</div>
+                <p class="muted">Prediction becomes a dot product:</p>
+                <div class="eqMono">r̂(u,i) = Uu · Vi</div>
+                <p class="muted">
+                  Training minimizes error on known interactions and adds regularization to avoid overfitting.
+                </p>
+              </div>
+            </details>
+          </div>
+        </details>
+
+      </section>
+
+      <!-- APPROACHES -->
+      <section class="accordionGroup card" id="recommender-approaches">
+        <div class="card__header">
+          <h2>3) Main recommendation approaches used in social media</h2>
+          <p class="muted">Platforms rarely use just one method — they combine them.</p>
+        </div>
+
+        <details class="accordion" open>
+          <summary>
+            <span>Collaborative filtering</span>
+            <span class="chip">Behavior</span>
+          </summary>
+          <div class="accordion__body">
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                “People like you” signals matter. If users with similar histories liked an item, you may like it too.
+              </p>
+            </div>
+
+            <p>
+              Collaborative filtering uses interaction patterns across many users.
+              It works well when you have lots of user behavior, but struggles with <span class="gterm" data-term="cold-start">cold start</span>.
+            </p>
+
+            <ul class="niceList">
+              <li><strong>User-based:</strong> find similar users → recommend what they liked</li>
+              <li><strong>Item-based:</strong> find similar items → recommend items similar to what you liked</li>
+              <li><strong>Factorization:</strong> learn latent vectors for users/items</li>
+            </ul>
+
+            <details class="mathBox">
+              <summary>Show the math (optional)</summary>
+              <div class="mathBox__body">
+                <p class="muted">
+                  A classic item-based prediction:
+                </p>
+                <div class="eqMono">score(u, i) = Σ sim(i, j) over items j user u interacted with</div>
+              </div>
+            </details>
+          </div>
+        </details>
+
+        <details class="accordion" open>
+          <summary>
+            <span>Content-based recommendation</span>
+            <span class="chip">Features</span>
+          </summary>
+          <div class="accordion__body">
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                If you liked content with certain features (topic, style, creator), recommend similar content based on features.
+              </p>
+            </div>
+
+            <p>
+              Here, items are described by features (text topic, hashtags, audio patterns, video embeddings, creator identity).
+              A user profile can be built from the features of items they engaged with.
+            </p>
+
+            <details class="mathBox">
+              <summary>Show the math (optional)</summary>
+              <div class="mathBox__body">
+                <p class="muted">Represent user and item as vectors, then score by similarity:</p>
+                <div class="eqMono">score(u, i) = userVec(u) · itemVec(i)</div>
+              </div>
+            </details>
+          </div>
+        </details>
+
+        <details class="accordion">
+          <summary>
+            <span>Hybrid systems</span>
+            <span class="chip">Mix</span>
+          </summary>
+          <div class="accordion__body">
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                Hybrid systems combine behavior-based and feature-based signals to reduce weaknesses like cold start.
+              </p>
+            </div>
+
+            <p>
+              A simple hybrid approach is combining scores:
+              collaborative score + content score + popularity + freshness.
+              Modern systems do this with models that take many signals at once.
+            </p>
+
+            <details class="mathBox">
+              <summary>Show the math (optional)</summary>
+              <div class="mathBox__body">
+                <div class="eqMono">finalScore = w1·CF + w2·Content + w3·Freshness + w4·Quality</div>
+              </div>
+            </details>
+          </div>
+        </details>
+      </section>
+
+      <!-- RANKING -->
+      <section class="accordionGroup card" id="ranking-and-objectives">
+        <div class="card__header">
+          <h2>4) Ranking: turning predictions into a feed</h2>
+          <p class="muted">Ranking is where “math” becomes the final list you see.</p>
+        </div>
+
+        <details class="accordion" open>
+          <summary>
+            <span>What the model predicts</span>
+            <span class="chip">Score</span>
+          </summary>
+          <div class="accordion__body">
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                A ranking model estimates how valuable each item is to you, then sorts items by that estimate.
+              </p>
+            </div>
+
+            <p>
+              The score might be:
+              predicted click probability, expected watch time, chance you share, etc.
+              Often platforms use a combined value function — not only clicks.
+            </p>
+
+            <details class="mathBox">
+              <summary>Show the math (optional)</summary>
+              <div class="mathBox__body">
+                <p class="muted">Example: expected value scoring</p>
+                <div class="eqMono">score = P(click)·valueClick + P(share)·valueShare + E(watchTime)</div>
+              </div>
+            </details>
+
+            <div class="infoBox">
+              <div class="infoBox__title">Important reality</div>
+              <p class="infoBox__text">
+                Platforms also add constraints: safety, quality, diversity, and sometimes “avoid showing too much of one type”.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="accordion">
+          <summary>
+            <span>Diversity & re-ranking</span>
+            <span class="chip">Balance</span>
+          </summary>
+          <div class="accordion__body">
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                If you rank only by score, you can get repetitive feeds. Re-ranking adds variety while keeping relevance.
+              </p>
+            </div>
+
+            <p>
+              Diversity matters because users get bored seeing the same topic repeatedly, even if it scores high.
+              One common approach is to penalize items too similar to what’s already selected.
+            </p>
+
+            <div class="widget cardInner">
+              <div class="widget__header">
+                <h3>Widget: Diversity re-ranker demo</h3>
+                <p class="muted">
+                  This shows a toy “feed” with topic labels. Increase diversity penalty to reduce repeated topics.
+                </p>
+              </div>
+
+              <label class="field">
+                <span>Diversity penalty (0 = none, 1 = strong)</span>
+                <input id="divPenalty" type="range" min="0" max="1" step="0.05" value="0.35" />
+              </label>
+
+              <div class="toolRow">
+                <button class="button" id="btnDiversify" type="button">Re-rank</button>
+                <div class="result" id="divOut">Penalty: 0.35</div>
+              </div>
+
+              <div class="feedGrid">
+                <div>
+                  <div class="miniTitle">Original ranked list</div>
+                  <ol id="feedOriginal" class="feedList"></ol>
+                </div>
+                <div>
+                  <div class="miniTitle">After diversity re-rank</div>
+                  <ol id="feedDiversified" class="feedList"></ol>
+                </div>
+              </div>
+            </div>
+
+            <details class="mathBox">
+              <summary>Show the math idea (optional)</summary>
+              <div class="mathBox__body">
+                <p class="muted">
+                  A simple pattern: choose items one-by-one, penalizing similarity to items already chosen.
+                </p>
+                <div class="eqMono">adjustedScore = baseScore − penalty · similarityToSelected</div>
+              </div>
+            </details>
+          </div>
+        </details>
+      </section>
+
+      <!-- EVALUATION -->
+      <section class="accordionGroup card" id="evaluation-metrics">
+        <div class="card__header">
+          <h2>5) Evaluation: how we measure if recommendations are good</h2>
+          <p class="muted">Offline metrics approximate quality; online tests validate real impact.</p>
+        </div>
+
+        <details class="accordion" open>
+          <summary>
+            <span>Offline ranking metrics (Precision@K, Recall@K)</span>
+            <span class="chip">Metrics</span>
+          </summary>
+          <div class="accordion__body">
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                Offline metrics check whether the top recommendations include items the user actually interacted with later.
+              </p>
+            </div>
+
+            <p>
+              In a test set, you can compare the recommended top-K list with the items the user truly engaged with.
+              Precision asks “how many recommended were relevant?” and Recall asks “how many relevant did we successfully recommend?”
+            </p>
+
+            <details class="mathBox">
+              <summary>Show the math (optional)</summary>
+              <div class="mathBox__body">
+                <div class="eqMono">Precision@K = (# relevant in top K) / K</div>
+                <div class="eqMono">Recall@K = (# relevant in top K) / (# relevant total)</div>
+              </div>
+            </details>
+
+            <div class="widget cardInner">
+              <div class="widget__header">
+                <h3>Widget: Precision@K / Recall@K calculator</h3>
+                <p class="muted">
+                  Enter lists of IDs. Example recommended: <code>1,2,3,4,5</code> and relevant: <code>2,5,9</code>
+                </p>
+              </div>
+
+              <div class="formRow">
+                <label class="field">
+                  <span>Recommended list (ranked)</span>
+                  <input id="recList" type="text" value="1,2,3,4,5" />
+                </label>
+                <label class="field">
+                  <span>Relevant items (ground truth)</span>
+                  <input id="relList" type="text" value="2,5,9" />
+                </label>
+              </div>
+
+              <div class="formRow">
+                <label class="field">
+                  <span>K</span>
+                  <input id="kVal" type="number" min="1" value="5" />
+                </label>
+                <div class="field">
+                  <span>&nbsp;</span>
+                  <button class="button" id="btnPRcalc" type="button">Compute</button>
+                </div>
+              </div>
+
+              <div class="resultBox" id="prCalcOut">Results: —</div>
+            </div>
+          </div>
+        </details>
+
+        <details class="accordion">
+          <summary>
+            <span>NDCG: rewarding correct order near the top</span>
+            <span class="chip">Ranking</span>
+          </summary>
+          <div class="accordion__body">
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                NDCG rewards putting the best items near the top. Getting the order right at the top matters more than the bottom.
+              </p>
+            </div>
+
+            <p>
+              In feeds, being correct at rank #1 is more important than being correct at rank #50.
+              NDCG captures this using a “discount” as rank goes down.
+            </p>
+
+            <details class="mathBox">
+              <summary>Show the math (optional)</summary>
+              <div class="mathBox__body">
+                <p class="muted">DCG uses a logarithmic discount by rank:</p>
+                <div class="eqMono">DCG@K = Σ (rel_i / log2(i+1)) for i=1..K</div>
+                <p class="muted">NDCG normalizes by the ideal ordering:</p>
+                <div class="eqMono">NDCG@K = DCG@K / IDCG@K</div>
+              </div>
+            </details>
+
+            <div class="widget cardInner">
+              <div class="widget__header">
+                <h3>Widget: NDCG@K calculator</h3>
+                <p class="muted">
+                  Enter relevance grades for the ranked list. Example: <code>3,2,0,1,0</code> (higher = more relevant)
+                </p>
+              </div>
+
+              <div class="formRow">
+                <label class="field">
+                  <span>Relevance grades (ranked list)</span>
+                  <input id="ndcgList" type="text" value="3,2,0,1,0" />
+                </label>
+                <label class="field">
+                  <span>K</span>
+                  <input id="ndcgK" type="number" min="1" value="5" />
+                </label>
+              </div>
+
+              <div class="toolRow">
+                <button class="button" id="btnNDCG" type="button">Compute</button>
+                <div class="result" id="ndcgOut">NDCG: —</div>
+              </div>
+
+              <div class="smallNote">
+                Tip: NDCG = 1 means perfect ordering (best items at the top).
+              </div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- ONLINE EXPERIMENTS -->
+      <section class="accordionGroup card" id="online-experiments">
+        <div class="card__header">
+          <h2>6) Online experiments: A/B tests and bandits</h2>
+          <p class="muted">Offline metrics are hints; real product impact is validated online.</p>
+        </div>
+
+        <details class="accordion" open>
+          <summary>
+            <span>A/B testing in recommendation</span>
+            <span class="chip">Experiment</span>
+          </summary>
+          <div class="accordion__body">
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                A/B testing compares two versions by randomly splitting users so differences are likely caused by the change.
+              </p>
+            </div>
+
+            <p>
+              In recommender systems, a change might be: new ranking model, new diversity rule, or new candidate generator.
+              The key is to measure with KPIs like retention, watch time, satisfaction surveys, or “healthy engagement”.
+            </p>
+
+            <ul class="niceList">
+              <li><strong>Random assignment:</strong> users → A or B</li>
+              <li><strong>Run long enough:</strong> avoid false conclusions</li>
+              <li><strong>Guardrails:</strong> safety metrics, negative feedback, churn</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="accordion" open>
+          <summary>
+            <span>Multi-armed bandits (faster learning than A/B)</span>
+            <span class="chip">Explore/Exploit</span>
+          </summary>
+          <div class="accordion__body">
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                Bandits balance exploration (trying options to learn) and exploitation (using the best-known option).
+                This can reduce “wasted traffic” compared to fixed A/B splits.
+              </p>
+            </div>
+
+            <p>
+              Imagine two ranking strategies: A and B. A/B testing keeps traffic fixed (e.g., 50/50).
+              A bandit gradually sends more traffic to the better-performing option as evidence builds.
+            </p>
+
+            <div class="widget cardInner">
+              <div class="widget__header">
+                <h3>Widget: Epsilon-greedy bandit simulator (A vs B)</h3>
+                <p class="muted">
+                  Set true click rates for A and B, then run steps. Epsilon controls how often we explore.
+                </p>
+              </div>
+
+              <div class="formRow">
+                <label class="field">
+                  <span>True CTR of A</span>
+                  <input id="pA" type="number" min="0" max="1" step="0.01" value="0.08" />
+                </label>
+                <label class="field">
+                  <span>True CTR of B</span>
+                  <input id="pB" type="number" min="0" max="1" step="0.01" value="0.11" />
+                </label>
+              </div>
+
+              <div class="formRow">
+                <label class="field">
+                  <span>Epsilon (exploration rate)</span>
+                  <input id="eps" type="number" min="0" max="1" step="0.01" value="0.10" />
+                </label>
+                <label class="field">
+                  <span>Steps</span>
+                  <input id="steps" type="number" min="10" step="10" value="200" />
+                </label>
+              </div>
+
+              <div class="toolRow">
+                <button class="button" id="btnBandit" type="button">Run</button>
+                <button class="pill" id="btnBanditReset" type="button">Reset</button>
+              </div>
+
+              <div class="resultBox" id="banditOut">Results: —</div>
+
+              <details class="mathBox">
+                <summary>Show the math idea (optional)</summary>
+                <div class="mathBox__body">
+                  <p class="muted">
+                    Epsilon-greedy: with probability ε choose randomly (explore), otherwise choose the best estimated option (exploit).
+                  </p>
+                </div>
+              </details>
+            </div>
+
+          </div>
+        </details>
+      </section>
+
+      <!-- RISKS -->
+      <section class="accordionGroup card" id="risks-and-challenges">
+        <div class="card__header">
+          <h2>7) Challenges: cold start, feedback loops, and bias</h2>
+          <p class="muted">Real systems must manage human behavior and long-term effects.</p>
+        </div>
+
+        <details class="accordion" open>
+          <summary>
+            <span>Cold start</span>
+            <span class="chip">New</span>
+          </summary>
+          <div class="accordion__body">
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                When a user or item is new, there’s little behavior data. Systems rely more on content features and popularity signals.
+              </p>
+            </div>
+            <ul class="niceList">
+              <li><strong>New user:</strong> use onboarding interests, location, trending, safe exploration</li>
+              <li><strong>New item:</strong> use content embeddings + creator history + small exploration traffic</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="accordion">
+          <summary>
+            <span>Feedback loops</span>
+            <span class="chip">Long-term</span>
+          </summary>
+          <div class="accordion__body">
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                Recommenders influence what users see, which influences what users do — which changes the data the recommender learns from.
+              </p>
+            </div>
+            <p>
+              If a system over-recommends one topic, users might interact more simply because they see it more.
+              This can create “rich get richer” dynamics. Diversity and exploration help reduce this.
+            </p>
+          </div>
+        </details>
+
+        <details class="accordion">
+          <summary>
+            <span>Bias and fairness considerations</span>
+            <span class="chip">Ethics</span>
+          </summary>
+          <div class="accordion__body">
+            <div class="takeaway">
+              <div class="takeaway__title">Plain-language takeaway</div>
+              <p class="takeaway__text">
+                Data can reflect societal and platform biases. Ranking decisions can amplify them unless checked.
+              </p>
+            </div>
+            <p>
+              Fairness can involve ensuring creators aren’t unfairly suppressed, and users aren’t pushed into narrow content bubbles.
+              Platforms often use audits, safety rules, and diversity constraints as guardrails.
+            </p>
+          </div>
+        </details>
+      </section>
+
+      <!-- CONCLUSION -->
+      <section class="card" id="conclusion">
+        <div class="card__header">
+          <h2>Conclusion</h2>
+          <p class="muted">A full view: predict → rank → evaluate → iterate safely</p>
+        </div>
+
+        <p class="conclusionText">
+          Recommendation systems in social media combine behavior patterns (collaborative filtering), content understanding
+          (feature-based), and ranking models that predict value and sort items. Quality is tested with offline ranking metrics
+          like Precision@K and NDCG, and validated online with A/B testing or bandit strategies. The hardest parts are often
+          not only accuracy, but handling cold start, feedback loops, safety, and fairness.
+        </p>
+      </section>
+
+      <footer class="footer">
+        <p>Interactive learning page: TOC, search, progress bar, glossary, optional-math blocks, and widgets.</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <button id="backToTop" class="backToTop" type="button" aria-label="Back to top">↑</button>
+
+  <!-- Glossary popup -->
+  <div id="glossaryPopup" class="glossaryPopup" role="dialog" aria-hidden="true">
+    <div class="glossaryPopup__inner">
+      <div class="glossaryPopup__title" id="gTitle">Term</div>
+      <div class="glossaryPopup__text" id="gText">Definition</div>
+      <button class="pill" id="gClose" type="button">Close</button>
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
